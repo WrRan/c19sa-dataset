@@ -20,6 +20,7 @@
 import csv
 
 import datasets
+from logzero import logger
 
 
 _DESCRIPTION = """\
@@ -58,10 +59,41 @@ _CITATION = """\
 
 _TRAIN_DOWNLOAD_URL = "https://raw.githubusercontent.com/WrRan/c19sa-dataset/master/processed/train.csv"
 _VAL_DOWNLOAD_URL = "https://raw.githubusercontent.com/WrRan/c19sa-dataset/master/processed/val.csv"
+_TEST_DOWNLOAD_URL = "https://raw.githubusercontent.com/WrRan/c19sa-dataset/master/processed/val_content.csv"
 
 
 class C19SA(datasets.GeneratorBasedBuilder):
     """Covid-19-Sentiment-Analysis."""
+
+    N_LABELS = 11
+
+    INDICES_TO_LABELS = [
+        'Optimistic',
+        'Thankful',
+        'Empathetic',
+        'Pessimistic',
+        'Anxious',
+        'Sad',
+        'Annoyed',
+        'Denial',
+        'Surprise',
+        'Official report',
+        'Joking'
+    ]
+
+    LABELS_TO_INDICES = {
+        'Optimistic': 0,
+        'Thankful': 1,
+        'Empathetic': 2,
+        'Pessimistic': 3,
+        'Anxious': 4,
+        'Sad': 5,
+        'Annoyed': 6,
+        'Denial': 7,
+        'Surprise': 8,
+        'Official report': 9,
+        'Joking': 10
+    }
 
     def _info(self):
         return datasets.DatasetInfo(
@@ -80,17 +112,32 @@ class C19SA(datasets.GeneratorBasedBuilder):
     def _split_generators(self, dl_manager):
         train_path = dl_manager.download_and_extract(_TRAIN_DOWNLOAD_URL)
         val_path = dl_manager.download_and_extract(_VAL_DOWNLOAD_URL)
+        test_path = dl_manager.download_and_extract(_TEST_DOWNLOAD_URL)
         return [
             datasets.SplitGenerator(name=datasets.Split.TRAIN, gen_kwargs={"filepath": train_path}),
             datasets.SplitGenerator(name=datasets.Split.VALIDATION, gen_kwargs={"filepath": val_path}),
+            datasets.SplitGenerator(name=datasets.Split.TEST, gen_kwargs={"filepath": test_path, "test": True})
         ]
 
-    def _generate_examples(self, filepath):
+    def _generate_examples(self, filepath, test: bool = False):
         """Generate C19SA examples."""
         with open(filepath, encoding="utf-8") as csv_file:
             csv_reader = csv.reader(
                     csv_file, quotechar='"', delimiter=",", quoting=csv.QUOTE_ALL, skipinitialspace=True
             )
             for id_, row in enumerate(csv_reader):
-                c19id, tweet, labels = row
-                yield id_, {"c19id": c19id, "text": tweet, "labels": labels.strip().split()}
+                if not test:
+                    c19id, tweet, labels = row
+                    yield id_, {"c19id": c19id, "text": tweet, "labels": labels.strip().split()}
+                else:
+                    c19id, tweet = row
+                    # logger.info(c19id)
+                    # logger.info(tweet)
+                    yield id_, {"c19id": c19id, "text": tweet, "labels": []}
+
+    @classmethod
+    def label_indices_to_multi_hot(cls, label_indices):
+        result = [0.0] * cls.N_LABELS
+        for index in label_indices:
+            result[index] = 1.0
+        return result
