@@ -20,7 +20,7 @@
 import csv
 
 import datasets
-from logzero import logger
+from datasets import Split
 
 
 _DESCRIPTION = """\
@@ -95,6 +95,14 @@ class C19SA(datasets.GeneratorBasedBuilder):
         'Joking': 10
     }
 
+    def __init__(self, *args, writer_batch_size=None, **kwargs):
+        super().__init__(*args, writer_batch_size=writer_batch_size, **kwargs)
+        data_files = kwargs.get('data_files', {})
+        data_files[Split.TRAIN] = data_files.get(Split.TRAIN, _TRAIN_DOWNLOAD_URL)
+        data_files[Split.VALIDATION] = data_files.get(Split.VALIDATION, _VAL_DOWNLOAD_URL)
+        data_files[Split.TEST] = data_files.get(Split.TEST, _TEST_DOWNLOAD_URL)
+        self.data_files = data_files
+
     def _info(self):
         return datasets.DatasetInfo(
                 description=_DESCRIPTION,
@@ -110,13 +118,13 @@ class C19SA(datasets.GeneratorBasedBuilder):
         )
 
     def _split_generators(self, dl_manager):
-        train_path = dl_manager.download_and_extract(_TRAIN_DOWNLOAD_URL)
-        val_path = dl_manager.download_and_extract(_VAL_DOWNLOAD_URL)
-        test_path = dl_manager.download_and_extract(_TEST_DOWNLOAD_URL)
+        train_path = dl_manager.download_and_extract(self.data_files[Split.TRAIN])
+        val_path = dl_manager.download_and_extract(self.data_files[Split.VALIDATION])
+        test_path = dl_manager.download_and_extract(self.data_files[Split.TEST])
         return [
-            datasets.SplitGenerator(name=datasets.Split.TRAIN, gen_kwargs={"filepath": train_path}),
-            datasets.SplitGenerator(name=datasets.Split.VALIDATION, gen_kwargs={"filepath": val_path}),
-            datasets.SplitGenerator(name=datasets.Split.TEST, gen_kwargs={"filepath": test_path, "test": True})
+            datasets.SplitGenerator(name=Split.TRAIN, gen_kwargs={"filepath": train_path}),
+            datasets.SplitGenerator(name=Split.VALIDATION, gen_kwargs={"filepath": val_path}),
+            datasets.SplitGenerator(name=Split.TEST, gen_kwargs={"filepath": test_path, "test": True})
         ]
 
     def _generate_examples(self, filepath, test: bool = False):
@@ -131,8 +139,6 @@ class C19SA(datasets.GeneratorBasedBuilder):
                     yield id_, {"c19id": c19id, "text": tweet, "labels": labels.strip().split()}
                 else:
                     c19id, tweet = row
-                    # logger.info(c19id)
-                    # logger.info(tweet)
                     yield id_, {"c19id": c19id, "text": tweet, "labels": []}
 
     @classmethod
