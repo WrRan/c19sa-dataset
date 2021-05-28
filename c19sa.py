@@ -97,7 +97,8 @@ class C19SA(datasets.GeneratorBasedBuilder):
 
     def __init__(self, *args, writer_batch_size=None, **kwargs):
         super().__init__(*args, writer_batch_size=writer_batch_size, **kwargs)
-        data_files = kwargs.get('data_files', {})
+        data_files = kwargs.get('data_files')
+        data_files = data_files if data_files is not None else {}
         data_files[Split.TRAIN] = data_files.get(Split.TRAIN, _TRAIN_DOWNLOAD_URL)
         data_files[Split.VALIDATION] = data_files.get(Split.VALIDATION, _VAL_DOWNLOAD_URL)
         data_files[Split.TEST] = data_files.get(Split.TEST, _TEST_DOWNLOAD_URL)
