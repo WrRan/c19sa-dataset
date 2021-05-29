@@ -18,6 +18,7 @@
 
 
 import csv
+from typing import List
 
 import datasets
 from datasets import Split
@@ -130,17 +131,19 @@ class C19SA(datasets.GeneratorBasedBuilder):
 
     def _generate_examples(self, filepath, test: bool = False):
         """Generate C19SA examples."""
-        with open(filepath, encoding="utf-8") as csv_file:
-            csv_reader = csv.reader(
-                    csv_file, quotechar='"', delimiter=",", quoting=csv.QUOTE_ALL, skipinitialspace=True
-            )
-            for id_, row in enumerate(csv_reader):
-                if not test:
-                    c19id, tweet, labels = row
-                    yield id_, {"c19id": c19id, "text": tweet, "labels": labels.strip().split()}
-                else:
-                    c19id, tweet = row
-                    yield id_, {"c19id": c19id, "text": tweet, "labels": []}
+        filepaths = filepath if isinstance(filepath, List) else [filepath]
+        for filepath in filepaths:
+            with open(filepath, encoding="utf-8") as csv_file:
+                csv_reader = csv.reader(
+                        csv_file, quotechar='"', delimiter=",", quoting=csv.QUOTE_ALL, skipinitialspace=True
+                )
+                for id_, row in enumerate(csv_reader):
+                    if not test:
+                        c19id, tweet, labels = row
+                        yield id_, {"c19id": c19id, "text": tweet, "labels": labels.strip().split()}
+                    else:
+                        c19id, tweet = row
+                        yield id_, {"c19id": c19id, "text": tweet, "labels": []}
 
     @classmethod
     def label_indices_to_multi_hot(cls, label_indices):
